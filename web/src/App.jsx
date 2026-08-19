@@ -30,7 +30,7 @@ import {
   nextCalendarMilestone,
 } from './brandHeaderStatus.js'
 
-const LEAGUE_TITLE_ABBR = 'TCLOT'
+const LEAGUE_TITLE_ABBR = 'FOS'
 const BRAND_HEADER_TOP_N = 8
 
 function wallClockSeasonLabel() {
@@ -38,7 +38,7 @@ function wallClockSeasonLabel() {
 }
 
 function leagueTitle(seasonLabel) {
-  return `Tri-Continental League of Titans, ${seasonLabel || wallClockSeasonLabel()} season`
+  return `The FOS League, ${seasonLabel || wallClockSeasonLabel()} season`
 }
 
 // Lion silhouette extracted verbatim from public/tclot-fantasy-style-banner.svg.

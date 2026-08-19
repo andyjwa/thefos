@@ -351,7 +351,7 @@ export function TeamDetailView({
         </div>
 
         <div className="tc-foot">
-          TC LEAGUE OF TITANS · {archivedSeasonLabel() || getSeasonLabel()}
+          THE FOS LEAGUE · {archivedSeasonLabel() || getSeasonLabel()}
         </div>
       </div>
     </div>
