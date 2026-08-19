@@ -9,6 +9,7 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync, unlinkSync } from '
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { reconstructDraftPicks } from '../src/draftBoardPicks.js'
+import { picksFromDraftChoices } from '../src/draftChoicesPicks.js'
 import { readLeagueId } from './readLeagueId.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -44,43 +45,64 @@ try {
   const elementById = new Map((boot.elements || []).map((e) => [e.id, e]))
   const teamById = new Map((boot.teams || []).map((t) => [t.id, t]))
 
-  const orderPath = join(webPublic, 'draft_round1_order.json')
-  let round1FplEntryIds = null
-  if (existsSync(orderPath)) {
-    try {
-      const raw = JSON.parse(readFileSync(orderPath, 'utf8'))
-      if (Array.isArray(raw.fplEntryIds)) round1FplEntryIds = raw.fplEntryIds
-    } catch {
-      /* ignore */
-    }
-  } else {
-    console.warn(
-      'build-draft-picks: no draft_round1_order.json — using FPL entry_id fallback for round 1 (not real draft order). Add draft_round1_order.json (FPL entry_id per round-1 slot; see TCLOT web/public/league-data/draft_round1_order.json).',
-    )
-  }
-
   const startGw = Number(details.league?.start_event) >= 1 ? Number(details.league.start_event) : 1
-  const picksByFpl = new Map()
 
-  for (const le of leagueEntries) {
-    const j = await fetchJson(`${DRAFT}/entry/${le.entry_id}/event/${startGw}`)
-    picksByFpl.set(
-      le.entry_id,
-      (j.picks || []).map((p) => p.element).filter((x) => x != null),
-    )
+  /**
+   * Preferred source: the draft pick log. True pick order, and available as soon as the
+   * draft completes — /entry/{id}/event/{gw} (fallback below) 404s until the GW starts,
+   * which used to leave pre-GW1 builds with no draft_picks.json at all.
+   */
+  let picks = null
+  let note = null
+  try {
+    const choicesRaw = await fetchJson(`${DRAFT}/draft/${leagueId}/choices`)
+    picks = picksFromDraftChoices(choicesRaw, leagueEntries, elementById, teamById)
+    if (picks?.length) {
+      note = `Built directly from draft API /draft/${leagueId}/choices (true pick order).`
+    }
+  } catch (e) {
+    console.warn('build-draft-picks: choices unavailable —', e.message)
   }
 
-  const picks = reconstructDraftPicks(leagueEntries, picksByFpl, elementById, teamById, 15, {
-    round1FplEntryIds,
-  })
+  if (!picks?.length) {
+    const orderPath = join(webPublic, 'draft_round1_order.json')
+    let round1FplEntryIds = null
+    if (existsSync(orderPath)) {
+      try {
+        const raw = JSON.parse(readFileSync(orderPath, 'utf8'))
+        if (Array.isArray(raw.fplEntryIds)) round1FplEntryIds = raw.fplEntryIds
+      } catch {
+        /* ignore */
+      }
+    } else {
+      console.warn(
+        'build-draft-picks: no draft_round1_order.json — using FPL entry_id fallback for round 1 (not real draft order). Add draft_round1_order.json (FPL entry_id per round-1 slot; see TCLOT web/public/league-data/draft_round1_order.json).',
+      )
+    }
+
+    const picksByFpl = new Map()
+    for (const le of leagueEntries) {
+      const j = await fetchJson(`${DRAFT}/entry/${le.entry_id}/event/${startGw}`)
+      picksByFpl.set(
+        le.entry_id,
+        (j.picks || []).map((p) => p.element).filter((x) => x != null),
+      )
+    }
+
+    picks = reconstructDraftPicks(leagueEntries, picksByFpl, elementById, teamById, 15, {
+      round1FplEntryIds,
+    })
+    note = round1FplEntryIds?.length
+      ? 'Snake round 1 from draft_round1_order.json; player order within team from draft_rank.'
+      : 'Snake round 1 from fallback FPL entry_id order (add draft_round1_order.json for true draft slots); within team from draft_rank.'
+  }
+
   const out = {
     _meta: {
       built: new Date().toISOString(),
       leagueId: Number(leagueId),
       startGw,
-      note: round1FplEntryIds?.length
-        ? 'Snake round 1 from draft_round1_order.json; player order within team from draft_rank.'
-        : 'Snake round 1 from fallback FPL entry_id order (add draft_round1_order.json for true draft slots); within team from draft_rank.',
+      note,
     },
     picks,
   }
