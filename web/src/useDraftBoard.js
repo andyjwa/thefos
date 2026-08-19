@@ -73,6 +73,7 @@ function normalizeStaticPicks(raw, leagueEntries) {
     playerName: p.playerName ?? `Player #${p.element}`,
     teamShort: p.teamShort ?? '—',
     pos: p.pos ?? '—',
+    wasAuto: p.wasAuto === true,
   }
   })
 }
