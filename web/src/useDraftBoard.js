@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
-import { draftEntryEventUrl } from './fplDraftUrl'
+import { draftEntryEventUrl, draftResourceUrl } from './fplDraftUrl'
 import { reconstructDraftPicks } from './draftBoardPicks'
+import { picksFromDraftChoices } from './draftChoicesPicks'
 import {
   draftCurrentGameweek,
   buildFirstLeftGameweekMap,
@@ -14,6 +15,16 @@ const DATA_BASE = leagueDataBase()
 async function fetchOptionalJson(path) {
   try {
     const r = await fetch(`${DATA_BASE}/${path}`)
+    if (!r.ok) return null
+    return r.json()
+  } catch {
+    return null
+  }
+}
+
+async function fetchOptionalJsonUrl(url) {
+  try {
+    const r = await fetch(url)
     if (!r.ok) return null
     return r.json()
   } catch {
@@ -190,41 +201,63 @@ export function useDraftBoard(league, leagueEntries) {
         const elementById = new Map((boot.elements || []).map((e) => [e.id, e]))
         const teamById = new Map((boot.teams || []).map((t) => [t.id, t]))
 
-        const orderRaw = await fetchOptionalJson('draft_round1_order.json')
-        const round1FplEntryIds = Array.isArray(orderRaw?.fplEntryIds)
-          ? orderRaw.fplEntryIds
-          : null
+        /**
+         * Draft pick log first: true pick order, and available as soon as the draft ends.
+         * The GW-squad reconstruction below needs /entry/{id}/event/{gw}, which 404s
+         * until the gameweek starts (draft done, GW1 not kicked off → dead Draft tab).
+         */
+        let reconstructed = null
+        if (league?.id != null) {
+          const choicesRaw = await fetchOptionalJsonUrl(
+            draftResourceUrl(`draft/${league.id}/choices`),
+          )
+          reconstructed = picksFromDraftChoices(
+            choicesRaw,
+            leagueEntries,
+            elementById,
+            teamById,
+          )
+        }
+        const usedChoices = Boolean(reconstructed?.length)
 
-        const picksByFpl = new Map()
-        await Promise.all(
-          leagueEntries.map(async (le) => {
-            const urlGw1 = draftEntryEventUrl(le.entry_id, startGw)
-            const r1 = await fetch(urlGw1)
-            if (!r1.ok) {
-              throw new Error(
-                `GW${startGw} picks for entry ${le.entry_id}: HTTP ${r1.status}`,
-              )
-            }
-            const j1 = await r1.json()
-            const els = (j1.picks || []).map((p) => p.element).filter((x) => x != null)
-            picksByFpl.set(le.entry_id, els)
-          }),
-        )
+        if (!usedChoices) {
+          const orderRaw = await fetchOptionalJson('draft_round1_order.json')
+          const round1FplEntryIds = Array.isArray(orderRaw?.fplEntryIds)
+            ? orderRaw.fplEntryIds
+            : null
 
-        const reconstructed = reconstructDraftPicks(
-          leagueEntries,
-          picksByFpl,
-          elementById,
-          teamById,
-          15,
-          { round1FplEntryIds },
-        )
+          const picksByFpl = new Map()
+          await Promise.all(
+            leagueEntries.map(async (le) => {
+              const urlGw1 = draftEntryEventUrl(le.entry_id, startGw)
+              const r1 = await fetch(urlGw1)
+              if (!r1.ok) {
+                throw new Error(
+                  `GW${startGw} picks for entry ${le.entry_id}: HTTP ${r1.status}`,
+                )
+              }
+              const j1 = await r1.json()
+              const els = (j1.picks || []).map((p) => p.element).filter((x) => x != null)
+              picksByFpl.set(le.entry_id, els)
+            }),
+          )
+
+          reconstructed = reconstructDraftPicks(
+            leagueEntries,
+            picksByFpl,
+            elementById,
+            teamById,
+            15,
+            { round1FplEntryIds },
+          )
+        }
+
         let enriched = enrichPicksFromBootstrap(boot, reconstructed)
         enriched = await applyRosterStatus(enriched, leagueEntries, boot)
 
         if (!cancelled) {
           setPicks(enriched)
-          setSource('api')
+          setSource(usedChoices ? 'choices' : 'api')
           setLoading(false)
         }
       } catch (e) {
