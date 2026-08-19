@@ -17,11 +17,16 @@
  * table by points → points-for. 5000 iterations.
  *
  * Editorial verdicts live in VERDICTS below so a data refresh never
- * clobbers the writing.
+ * clobbers the writing (they are keyed by leagueEntryId, so other leagues
+ * simply get no verdict text).
  *
- * Run: node scripts/build-season-preview.mjs
+ * Runs in the deploy chain, but a committed season-preview.json wins: the
+ * preview is a pre-season prior and must not drift as forecasts update, so
+ * an existing file is never overwritten unless run with --force.
+ *
+ * Run: node scripts/build-season-preview.mjs [--force]
  */
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { simulateSeasonAsOf } from '../src/seasonPredictionsModel.js'
@@ -30,17 +35,47 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const dataDir = join(root, 'public/league-data')
 const read = (f) => JSON.parse(readFileSync(join(dataDir, f), 'utf8'))
 
-const picksDoc = read('draft_picks.json')
-const predictions = read('predictions.json')
-const bootstrap = read('bootstrap_draft.json')
-const details = read('details.json')
+const outPath = join(dataDir, 'season-preview.json')
+if (existsSync(outPath) && !process.argv.includes('--force')) {
+  console.log('build-season-preview: season-preview.json exists — keeping it (use --force to regenerate)')
+  process.exit(0)
+}
+
+/* Fail soft: forks may not have a draft or predictions yet — a missing
+ * preview just hides the Preview/Predictions tabs, a crashed build ships nothing. */
+let picksDoc
+let predictions
+let bootstrap
+let details
+try {
+  picksDoc = read('draft_picks.json')
+  predictions = read('predictions.json')
+  bootstrap = read('bootstrap_draft.json')
+  details = read('details.json')
+} catch (err) {
+  console.warn('build-season-preview: skip —', err.message)
+  process.exit(0)
+}
+if (!Array.isArray(picksDoc?.picks) || picksDoc.picks.length === 0) {
+  console.warn('build-season-preview: skip — draft_picks.json has no picks')
+  process.exit(0)
+}
+if (picksDoc.picks.some((p) => p.leagueEntryId == null)) {
+  console.warn('build-season-preview: skip — draft picks lack leagueEntryId')
+  process.exit(0)
+}
 
 const SIMS = 5000
 const forecastById = new Map(predictions.players.map((p) => [p.id, p]))
 const carryById = new Map(bootstrap.elements.map((e) => [e.id, e.total_points]))
 const statusById = new Map(bootstrap.elements.map((e) => [e.id, e.status]))
-/** Manual league-confirmed corrections FPL hasn't flagged yet (see the JSON's note). */
-const overrides = read('availability-overrides.json')
+/** Manual league-confirmed corrections FPL hasn't flagged yet (see the JSON's note). Optional. */
+let overrides = null
+try {
+  overrides = read('availability-overrides.json')
+} catch {
+  /* no overrides file — fine */
+}
 for (const o of overrides?.overrides ?? []) statusById.set(Number(o.id), o.status)
 
 /** 3-sentence pundit verdicts, keyed by leagueEntryId. Written against the
@@ -251,5 +286,5 @@ const output = {
   teams: outTeams,
 }
 
-writeFileSync(join(dataDir, 'season-preview.json'), JSON.stringify(output, null, 1))
+writeFileSync(outPath, JSON.stringify(output, null, 1))
 console.log('season-preview.json written:', outTeams.map((t) => `${t.name} ${t.sim.avgFinish}`).join(' | '))
