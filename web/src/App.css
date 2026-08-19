@@ -18237,6 +18237,19 @@ button.live-xp__player-name:focus-visible {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   background: var(--surface, var(--fm-card));
+  /* 12-team leagues overflow between ~1085px and ~1450px viewports; keep the
+   * horizontal scrollbar permanently visible (macOS overlay scrollbars would
+   * otherwise hide it and the last columns read as clipped, not scrollable). */
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text-muted, var(--fm-muted)) 55%, transparent)
+    transparent;
+}
+.draft-grid::-webkit-scrollbar { height: 10px; }
+.draft-grid::-webkit-scrollbar-track { background: transparent; }
+.draft-grid::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-muted, var(--fm-muted)) 45%, transparent);
+  border-radius: 999px;
+  border: 2px solid var(--surface, var(--fm-card));
 }
 .draft-grid__inner { min-width: calc(2.4rem + var(--draft-grid-cols, 8) * 96px); }
 .draft-grid__head,
@@ -18261,6 +18274,19 @@ button.live-xp__player-name:focus-visible {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-muted, var(--fm-muted));
+}
+/* Round-number rail stays pinned while the grid scrolls horizontally. */
+.draft-grid__corner,
+.draft-grid__rnd {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--surface, var(--fm-card));
+  box-shadow: 1px 0 0 var(--border, var(--fm-border));
+}
+.draft-grid__corner {
+  z-index: 3;
+  background: var(--surface-2, var(--fm-surface-2, var(--fm-table-head)));
 }
 .draft-grid__th {
   display: flex;
