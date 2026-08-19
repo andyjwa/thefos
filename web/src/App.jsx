@@ -31,7 +31,6 @@ import {
 } from './brandHeaderStatus.js'
 
 const LEAGUE_TITLE_ABBR = 'FOS'
-const BRAND_HEADER_TOP_N = 8
 
 function wallClockSeasonLabel() {
   return getSeasonLabel()
@@ -344,24 +343,15 @@ function SeasonSwitcher({ currentSeasonLabel, archivedSeasons = [] }) {
 }
 
 /**
- * Header tile carrying the brand pill + season meta + top-8 fantasy crests
- * (rank 1 leftmost → rank 8 rightmost), with the status strip beneath. Spec:
- * variant 4 of HEADER · POST-PR-#2 EVOLUTION (Mockup.jsx `HeroVariantBSeasonAndCrests`).
+ * Header tile carrying the brand pill + season meta, with the status strip
+ * beneath. (The former top-8 crest row was removed for thefos.)
  *
  * @param {{
- *   tableRows?: object[],
- *   leagueEntries?: object[],
- *   teamLogoMap?: Record<string, string>,
- *   kitIndexByEntry?: Record<string, number>,
  *   liveStatus?: object | null,
  *   hideStatusStrip?: boolean,
  * }} props
  */
 function BrandHeader({
-  tableRows,
-  leagueEntries,
-  teamLogoMap,
-  kitIndexByEntry,
   liveStatus,
   leagueInfoOpen = false,
   onOpenLeagueInfo,
@@ -369,29 +359,6 @@ function BrandHeader({
   archivedSeasons = [],
   hideStatusStrip = false,
 }) {
-  const entryById = useMemo(() => {
-    const m = new Map()
-    for (const e of leagueEntries ?? []) {
-      if (e?.id != null) m.set(e.id, e)
-    }
-    return m
-  }, [leagueEntries])
-
-  const topRows = useMemo(() => {
-    const list = Array.isArray(tableRows) ? tableRows : []
-    if (list.length > 0) {
-      const sorted = [...list].sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99))
-      return sorted.slice(0, BRAND_HEADER_TOP_N)
-    }
-    // Pre-season / no table yet — show joined clubs in join order.
-    const entries = Array.isArray(leagueEntries) ? [...leagueEntries] : []
-    return entries
-      .filter((e) => e?.id != null)
-      .sort((a, b) => String(a.joined_time ?? '').localeCompare(String(b.joined_time ?? '')))
-      .slice(0, BRAND_HEADER_TOP_N)
-      .map((e, i) => ({ league_entry: e.id, rank: i + 1 }))
-  }, [tableRows, leagueEntries])
-
   /** Archive view: the strip's countdowns/live cues describe the *current*
    * season and would mislead against frozen data — the archive banner below
    * the header carries the context instead. */
@@ -417,35 +384,6 @@ function BrandHeader({
           currentSeasonLabel={currentSeasonLabel}
           archivedSeasons={archivedSeasons}
         />
-        <span
-          className="brand-header__crests"
-          aria-label="League standings — top 8"
-        >
-          {topRows.map((r) => {
-            const e = entryById.get(r.league_entry) ?? {}
-            const teamName = e.entry_name ?? '—'
-            const mgr = `${e.player_first_name ?? ''} ${e.player_last_name ?? ''}`.trim()
-            const title = mgr
-              ? `${r.rank}. ${teamName} — ${mgr}`
-              : `${r.rank}. ${teamName}`
-            return (
-              <span
-                className="brand-header__crest"
-                key={r.league_entry ?? `${r.rank}-${teamName}`}
-                title={title}
-              >
-                <TeamAvatar
-                  entryId={e.id}
-                  name={teamName}
-                  size="sm"
-                  logoMap={teamLogoMap ?? {}}
-                  kitIndexByEntry={kitIndexByEntry}
-                  badgeFallback
-                />
-              </span>
-            )
-          })}
-        </span>
       </div>
       {showStatusStrip ? (
         <div
@@ -3253,10 +3191,6 @@ function App() {
         <div className="dashboard-page-hero">
           <header className="page-header">
             <BrandHeader
-              tableRows={tableRows}
-              leagueEntries={leagueEntries}
-              teamLogoMap={teamLogoMap}
-              kitIndexByEntry={kitIndexByEntry}
               liveStatus={brandHeaderStatus}
               leagueInfoOpen={leagueInfoOpen}
               onOpenLeagueInfo={() => setLeagueInfoOpen(true)}

@@ -8884,38 +8884,6 @@ body[data-tclot-theme='dark'] .live-player-slide__sheet {
   color: var(--text-muted);
 }
 
-/* Crest row — 8 fantasy team crests in current standings order
- * (rank 1 leftmost → rank 8 rightmost). 32px each, 6px flat gap (no
- * overlap — the shirt-silhouette fallback used for fantasy teams
- * without a custom PNG has visible outlines that overlap awkwardly).
- * Sized up from 24/4 (PR #3.7) to 32/6 (PR #4.5) for more visual
- * presence in the right slot now that the tile chrome is gone. */
-.brand-header__crests {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  justify-self: end;
-  white-space: nowrap;
-}
-.brand-header__crest {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-}
-/* Force the production crest atom to 32px regardless of its `size` prop;
- * `team-avatar-frame--sm` is normally 28px — we resize it locally so 8
- * crests render at the brand-row size we want (still fits cleanly in
- * the 68px brand row). */
-.brand-header__crests .team-avatar-frame {
-  width: 32px;
-  height: 32px;
-}
-.brand-header__crests .team-shirt {
-  width: 32px;
-  height: 32px;
-}
-
 /* Status strip — thin edge-to-edge band sitting directly below the
  * brand row. With the tile chrome gone (PR #4.5), the strip is no
  * longer clipped to a rounded tile; it spans the full available width
@@ -9042,9 +9010,6 @@ body[data-tclot-theme='dark'] .live-player-slide__sheet {
     right: 0;
     min-width: 156px;
     max-width: min(220px, calc(100vw - 24px));
-  }
-  .brand-header__crests {
-    display: none;
   }
   .brand-header__status-strip {
     padding: var(--space-2) var(--space-3);
