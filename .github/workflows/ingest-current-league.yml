@@ -37,33 +37,6 @@ jobs:
               sys.exit(1)
           PY
 
-      - name: Debug draft choices payload (temporary)
-        run: |
-          set -euo pipefail
-          ID="$(tr -d '[:space:]' < league-id)"
-          curl -fsS "https://draft.premierleague.com/api/draft/${ID}/choices" -o data/draft_choices_raw.json
-          for E in 9030 156316; do
-            curl -fsS "https://draft.premierleague.com/api/entry/${E}/event/1" -o "data/entry_${E}_gw1.json" || echo "entry ${E} gw1 fetch failed"
-          done
-          python3 - <<'PY'
-          import json
-          d = json.load(open('data/draft_choices_raw.json'))
-          ch = d.get('choices', [])
-          print('top-level keys:', sorted(d.keys()))
-          print('num choices:', len(ch))
-          if ch:
-              print('choice keys:', sorted(ch[0].keys()))
-          for c in ch:
-              print(
-                  'idx=', c.get('index'), 'rnd=', c.get('round'), 'pick=', c.get('pick'),
-                  'entry=', c.get('entry'), c.get('entry_name'),
-                  'el=', c.get('element'),
-                  c.get('player_first_name'), c.get('player_last_name'),
-                  'auto=', c.get('was_auto'), 'time=', c.get('choice_time'),
-                  sep=' ',
-              )
-          PY
-
       - uses: actions/upload-artifact@v4
         with:
           name: league-data-${{ github.sha }}
