@@ -215,6 +215,75 @@ byStrength.forEach((t, i) => {
   gradeByEntry.set(t.leagueEntryId, GRADES[gradeIdx])
 })
 
+/* ── Generated verdicts ─────────────────────────────────────────────────
+ * Leagues without hand-written VERDICTS get a few sentences composed from
+ * the model: key asset + value pick, the squad's most distinctive trait
+ * relative to the league, and the simulation's call. */
+const N = modeled.length
+const ord = (n) => {
+  const v = n % 100
+  if (v >= 11 && v <= 13) return `${n}th`
+  return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`
+}
+const rankIn = (arr, id) => arr.findIndex((x) => x.leagueEntryId === id) + 1
+const byCarry = [...modeled].sort((a, b) => b.carryTotal - a.carryTotal)
+const byBench = [...modeled].sort((a, b) => b.benchStrength - a.benchStrength)
+const bySigma = [...modeled].sort((a, b) => b.sigma - a.sigma)
+const titleFavouriteId = ids.reduce((best, id) =>
+  sim.get(id).titlePct > sim.get(best).titlePct ? id : best,
+)
+const spoonFavouriteId = ids.reduce((worst, id) =>
+  sim.get(id).lastPct > sim.get(worst).lastPct ? id : worst,
+)
+
+function makeVerdict(t, s) {
+  const id = t.leagueEntryId
+  const kp = t.keyPlayer
+  const weekly = Number(kp.weekly).toFixed(1)
+
+  let s1 =
+    kp.round === 1
+      ? `${kp.playerName} at pick ${kp.overallPick} is the headline asset, projected for ${weekly} points a week.`
+      : `The best asset on this board is ${kp.playerName}, who arrived in round ${kp.round} and projects ${weekly} points a week.`
+  if (t.steal && t.steal.overallPick !== kp.overallPick) {
+    s1 = s1.slice(0, -1) + `, and ${t.steal.playerName} in round ${t.steal.round} was the real value of the draft.`
+  }
+
+  const traits = []
+  const carryRank = rankIn(byCarry, id)
+  const benchRank = rankIn(byBench, id)
+  const sigmaRank = rankIn(bySigma, id)
+  if (carryRank === 1) traits.push('no fifteen carried more proven 25/26 points into the season')
+  if (carryRank === N) traits.push('the squad carried the fewest 25/26 points in the league, so the floor is unproven')
+  if (benchRank === 1) traits.push('the bench is the deepest in the draft')
+  if (benchRank === N) traits.push('the bench is the thinnest in the league, so injuries would bite hard')
+  if (sigmaRank === 1) traits.push('week-to-week variance is the highest in the league — boom or bust')
+  if (sigmaRank === N) traits.push('the weekly profile is the steadiest in the draft')
+  const strengthRank = rankIn(byStrength, id)
+  let s2
+  if (traits.length) {
+    const joined = traits.slice(0, 2).join(', and ')
+    s2 = joined.charAt(0).toUpperCase() + joined.slice(1) + '.'
+  } else {
+    s2 = `The model rates this XI ${ord(strengthRank)} of ${N} in the league for weekly output.`
+  }
+
+  let s3
+  if (id === titleFavouriteId) {
+    s3 = `The simulation makes them the title favourite: ${s.titlePct}% to win it with a projected finish of ${ord(Math.round(s.avgFinish))}.`
+  } else if (s.titlePct >= 10) {
+    s3 = `A genuine contender — ${s.titlePct}% title odds and ${s.topHalfPct}% to finish top half.`
+  } else if (id === spoonFavouriteId && s.lastPct >= 15) {
+    s3 = `The simulation braces for a long season: ${s.lastPct}% wooden-spoon risk against ${s.titlePct}% title odds.`
+  } else if (s.topHalfPct >= 50) {
+    s3 = `The model calls a top-half push (${s.topHalfPct}%) with an average finish of ${ord(Math.round(s.avgFinish))}.`
+  } else {
+    s3 = `Mid-table is the call — an average finish of ${ord(Math.round(s.avgFinish))} and ${s.topHalfPct}% top-half odds.`
+  }
+
+  return `${s1} ${s2} ${s3}`
+}
+
 const outTeams = modeled.map((t) => {
   const s = sim.get(t.leagueEntryId)
   return {
@@ -255,7 +324,7 @@ const outTeams = modeled.map((t) => {
       avgD: s.avgD,
       finishDistribution: s.finishDistribution,
     },
-    verdict: VERDICTS[t.leagueEntryId] ?? '',
+    verdict: VERDICTS[t.leagueEntryId] ?? makeVerdict(t, s),
   }
 })
 
