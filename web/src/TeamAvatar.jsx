@@ -1,11 +1,9 @@
-import { useState, useMemo, useId } from 'react'
+import { useState, useMemo } from 'react'
+import { TEAM_CIRCLES, TEAM_KIT_COUNT } from './teamKitStyles'
 import {
-  SHIRT_FILL_PATH,
-  SHIRT_OUTLINE_PATH,
-  SHIRT_TEXT_ANCHOR,
-  SHIRT_VIEW_BOX,
-} from './shirtSilhouettePaths'
-import { TEAM_KITS, TEAM_KIT_COUNT } from './teamKitStyles'
+  initialsFromDisplayName,
+  managerInitialsForEntry,
+} from './managerDirectory.js'
 
 const RAW_BASE = `${import.meta.env.BASE_URL}team-logos/`
 const WEB_BASE = `${import.meta.env.BASE_URL}team-logos-web/`
@@ -17,11 +15,6 @@ const LOGO_EXTS = ['png', 'PNG', 'jpg', 'JPG', 'jpeg', 'JPEG', 'webp', 'WEBP']
  */
 const LOGO_ZOOM_ENTRY_IDS = new Set([39219, 26587, 40206, 27370])
 
-const SHIRT_TEXT = {
-  sm: { fontSize: 15 },
-  md: { fontSize: 20 },
-  lg: { fontSize: 33 },
-}
 
 /**
  * @param {boolean} [customLogoOnly] If true, skip auto-generated team-logos-web assets; only
@@ -90,114 +83,24 @@ function resolveKitIndex(entryId, kitIndexByEntry, name) {
   return mixed % TEAM_KIT_COUNT
 }
 
-function patternIdBase(reactId) {
-  return `k${reactId.replace(/[^a-zA-Z0-9]/g, '')}`
-}
-
 /**
- * Rounded “badge” with one initial (no shirt SVG) — for contexts that prefer a crest over kit.
- * Matches {@link team-avatar-frame} sizing.
+ * Default team avatar — one of 12 unique coloured circles with the manager's
+ * initials (falls back to team-name initials when the manager isn't in the
+ * directory yet). Keeps the legacy `team-shirt team-shirt--{size}` classes so
+ * every per-surface layout rule keeps sizing the badge correctly.
  */
-function CircleInitialsBadge({ name, size }) {
-  const initial = (() => {
-    const t = String(name ?? '').trim()
-    if (t) return t.slice(0, 1).toUpperCase()
-    return '?'
-  })()
+function CircleKitBadge({ name, entryId, size, kitIndex }) {
+  const circle = TEAM_CIRCLES[kitIndex] ?? TEAM_CIRCLES[0]
+  const initials =
+    managerInitialsForEntry(entryId) || initialsFromDisplayName(name) || '?'
   return (
     <span
-      className={`team-avatar-frame team-avatar-fallback-initials team-avatar-frame--${size}`}
+      className={`team-shirt team-shirt--${size} team-kit-circle team-kit-circle--${size}`}
+      style={{ background: circle.bg, color: circle.text }}
       aria-hidden
     >
-      <span className="team-avatar-fallback-initials__glyph">{initial}</span>
+      <span className="team-kit-circle__glyph">{initials}</span>
     </span>
-  )
-}
-
-function ShirtInitialsBadge({ name, size, kitIndex }) {
-  const initial = (name || '?').slice(0, 2).toUpperCase()
-  const kit = TEAM_KITS[kitIndex] ?? TEAM_KITS[0]
-  const reactId = useId()
-  const pid = patternIdBase(reactId)
-  const stripeVId = `${pid}-sv`
-  const stripeHId = `${pid}-sh`
-  const { fontSize } = SHIRT_TEXT[size] ?? SHIRT_TEXT.md
-  const { x: textX, y: textY } = SHIRT_TEXT_ANCHOR
-
-  const textStroke =
-    kit.outline === 'light'
-      ? 'rgba(255, 255, 255, 0.72)'
-      : 'rgba(0, 0, 0, 0.38)'
-  const strokeW = kit.mode === 'solid' ? 1.05 : 1.45
-
-  const fill =
-    kit.mode === 'solid'
-      ? kit.fill
-      : kit.mode === 'stripes-v'
-        ? `url(#${stripeVId})`
-        : `url(#${stripeHId})`
-
-  return (
-    <svg
-      className={`team-shirt team-shirt--${size}`}
-      viewBox={SHIRT_VIEW_BOX}
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden
-    >
-      {kit.mode === 'stripes-v' ? (
-        <defs>
-          <pattern
-            id={stripeVId}
-            width="11"
-            height="140"
-            y="-10"
-            patternUnits="userSpaceOnUse"
-          >
-            <rect y="-10" width="5.5" height="140" fill={kit.a} />
-            <rect y="-10" x="5.5" width="5.5" height="140" fill={kit.b} />
-          </pattern>
-        </defs>
-      ) : kit.mode === 'stripes-h' ? (
-        <defs>
-          <pattern
-            id={stripeHId}
-            width="140"
-            height="12"
-            y="-10"
-            patternUnits="userSpaceOnUse"
-          >
-            <rect y="-10" width="140" height="6" fill={kit.a} />
-            <rect y="-4" width="140" height="6" fill={kit.b} />
-          </pattern>
-        </defs>
-      ) : null}
-      <path d={SHIRT_FILL_PATH} fill={fill} />
-      <path
-        d={SHIRT_OUTLINE_PATH}
-        fill="none"
-        stroke="rgba(0, 0, 0, 0.34)"
-        strokeWidth="0.75"
-        vectorEffect="non-scaling-stroke"
-      />
-      <text
-        x={textX}
-        y={textY}
-        textAnchor="middle"
-        dominantBaseline="middle"
-        fill={kit.text}
-        stroke={textStroke}
-        strokeWidth={strokeW}
-        paintOrder="stroke fill"
-        style={{
-          fontFamily: 'inherit',
-          fontSize,
-          fontWeight: 800,
-          letterSpacing: '-0.02em',
-        }}
-      >
-        {initial}
-      </text>
-    </svg>
   )
 }
 
@@ -210,15 +113,12 @@ export function TeamAvatar({
   size = 'md',
   logoMap = {},
   kitIndexByEntry,
-  /** If true, render nothing when no custom logo image loads (no shirt initials fallback). */
+  /** If true, render nothing when no custom logo image loads (no circle initials fallback). */
   noFallback = false,
   /** If true, only try custom uploads (team-logos/ + logoMap), not team-logos-web pipeline. */
   customLogoOnly = false,
-  /**
-   * If true, when no logo image is shown, use a simple circular initial instead of the shirt
-   * silhouette.
-   */
-  badgeFallback = false,
+  /** Legacy no-op — the coloured circle badge is now the only fallback. */
+  badgeFallback = false, // eslint-disable-line no-unused-vars -- kept for caller-API stability
 }) {
   const kitIndex = useMemo(
     () => resolveKitIndex(entryId, kitIndexByEntry, name),
@@ -238,11 +138,8 @@ export function TeamAvatar({
 
   if (entryId == null || showInitials) {
     if (noFallback) return null
-    if (badgeFallback) {
-      return <CircleInitialsBadge name={name} size={size} />
-    }
     return (
-      <ShirtInitialsBadge
+      <CircleKitBadge
         name={name}
         entryId={entryId}
         size={size}
@@ -254,11 +151,8 @@ export function TeamAvatar({
   const src = srcList[idx]
   if (!src) {
     if (noFallback) return null
-    if (badgeFallback) {
-      return <CircleInitialsBadge name={name} size={size} />
-    }
     return (
-      <ShirtInitialsBadge
+      <CircleKitBadge
         name={name}
         entryId={entryId}
         size={size}

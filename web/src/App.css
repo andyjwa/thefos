@@ -11130,6 +11130,38 @@ body[data-tclot-theme='dark'] .live-player-slide__sheet {
   height: 62px;
 }
 
+/* Default team badge: coloured circle + manager initials (TeamAvatar
+ * CircleKitBadge). Shares the .team-shirt sizing hooks above so every
+ * surface-specific `.team-shirt` layout rule keeps working. The inset
+ * ring keeps the white circle visible on pale backgrounds. */
+.team-kit-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+  box-sizing: border-box;
+  user-select: none;
+}
+
+.team-kit-circle__glyph {
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.team-kit-circle--sm .team-kit-circle__glyph {
+  font-size: 11px;
+}
+
+.team-kit-circle--md .team-kit-circle__glyph {
+  font-size: 15px;
+}
+
+.team-kit-circle--lg .team-kit-circle__glyph {
+  font-size: 24px;
+}
+
 /* Circular clip; optional zoom only for padded circular crests (see TeamAvatar LOGO_ZOOM_ENTRY_IDS) */
 .team-avatar-frame {
   position: relative;

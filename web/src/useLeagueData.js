@@ -6,6 +6,7 @@ import {
   currentSeasonNameByManagerKey,
   overlayCurrentSeasonEntryName,
 } from './currentSeasonClubNames.js';
+import { setManagerDirectory } from './managerDirectory.js';
 
 import { isArchiveView, leagueDataBase } from './seasonArchive.js';
 
@@ -724,6 +725,7 @@ function processLeagueData(raw, extras = {}) {
   let standingsRaw = details.standings || [];
 
   const teams = buildTeamsMap(leagueEntries, extras.currentSeasonNameByManager);
+  setManagerDirectory(leagueEntries);
   const finishedCount = matches.filter((m) => m.finished).length;
 
   if (finishedCount > 0 && leagueEntries.length > 0) {
