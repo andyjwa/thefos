@@ -93,10 +93,9 @@ export function MobileBottomNav({
     : null
 
   // "More" stays lit while the user is on any destination reached through it
-  // (the More page itself, Heritage, or Settings).
+  // (the More page itself or Settings).
   const moreActive =
     dashboardView === 'more' ||
-    dashboardView === 'hall' ||
     dashboardView === 'settings'
 
   if (navLocked) {
@@ -120,20 +119,6 @@ export function MobileBottomNav({
               <NavIcon name="users" size={22} />
             </span>
             <span className="mobile-tab-bar__label">Draft</span>
-          </button>
-          <button
-            type="button"
-            className={
-              'mobile-tab-bar__btn' + (dashboardView === 'hall' ? ' is-active' : '')
-            }
-            onClick={() => onSelect('hall')}
-            aria-current={dashboardView === 'hall' ? 'page' : undefined}
-            aria-label="TCLOT Heritage"
-          >
-            <span className="mobile-tab-bar__ico" aria-hidden>
-              <NavIcon name="column" size={22} />
-            </span>
-            <span className="mobile-tab-bar__label">Heritage</span>
           </button>
         </div>
       </nav>

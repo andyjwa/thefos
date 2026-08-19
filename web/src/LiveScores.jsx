@@ -886,7 +886,10 @@ export function LiveScores({
   const [gohDismissed, setGohDismissed] = useState(false);
   const championFixtureBundle = useMemo(() => {
     if (gohDismissed) return null;
-    const shouldRender = gohForceFlag || Number(gameweek) === 1;
+    /* thefos has no champion of record (championOfRecord.js still points at
+     * the TCLOT 25/26 winner), so the production GW1 trigger is disabled —
+     * only the manual `?gohSplash=1` preview flag can render the splash. */
+    const shouldRender = gohForceFlag;
     if (!shouldRender) return null;
     const fx = findChampionFixture(gwMatches, REIGNING_CHAMPION_LEAGUE_ENTRY_ID);
     if (!fx) return null;
@@ -912,7 +915,6 @@ export function LiveScores({
   }, [
     gohDismissed,
     gohForceFlag,
-    gameweek,
     gwMatches,
     squadByLeagueEntry,
     teams,

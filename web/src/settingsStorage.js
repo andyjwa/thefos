@@ -10,7 +10,6 @@ export const DEFAULT_TAB_OPTIONS = /** @type {const} */ ([
   { id: 'fplLive',       label: 'FPL Live' },
   { id: 'standings',     label: 'Standings' },
   { id: 'players',       label: 'Players' },
-  { id: 'hall',          label: 'Hall of Champions' },
 ])
 
 export const DEFAULT_TAB_STORAGE_KEY = 'tclot:settings:default-tab'

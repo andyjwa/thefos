@@ -3794,6 +3794,9 @@ function App() {
             </>
           )}
 
+          {/* TCLOT heritage is hidden on thefos: every nav entry point to
+              'hall' was removed, so this render is unreachable. Kept so the
+              heritage component tree stays wired for any future archive. */}
           {dashboardView === 'hall' ? (
             <HallOfChampions tableRows={tableRows} />
           ) : null}
