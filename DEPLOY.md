@@ -2,6 +2,14 @@
 
 Two separate things ship to GitHub Pages: **JSON league data** and **PNG logos**.
 
+> **Hosting on Vercel?** The app lives in `web/`, not the repo root. The committed
+> root **`vercel.json`** tells Vercel to `npm ci` + `npm run build` inside `web/`
+> (with `VITE_BASE_PATH=/`) and publish `web/dist` — without it Vercel serves the
+> raw repo files and the site 404s. Keep the project's **Root Directory** setting
+> empty (repo root) so `vercel.json` is picked up, and add **`VITE_FPL_PROXY_URL`**
+> as a Vercel environment variable (Project → Settings → Environment Variables)
+> so the Live tab works — same value as the GitHub secret in § 1b below.
+
 ---
 
 ## 1. League data (standings, fixtures, waivers)
