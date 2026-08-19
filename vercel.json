@@ -1,0 +1,6 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "npm ci --prefix fpl-predictions && npm ci --prefix web",
+  "buildCommand": "node web/scripts/fetch-league-if-needed.mjs || rm -rf data; SKIP_LEAGUE_FETCH=1 VITE_BASE_PATH=/ npm run build --prefix web",
+  "outputDirectory": "web/dist"
+}
