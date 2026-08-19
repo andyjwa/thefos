@@ -30,7 +30,7 @@ import {
   nextCalendarMilestone,
 } from './brandHeaderStatus.js'
 
-const LEAGUE_TITLE_ABBR = 'TCLOT'
+const LEAGUE_TITLE_ABBR = 'FOS'
 const BRAND_HEADER_TOP_N = 8
 
 function wallClockSeasonLabel() {
@@ -38,7 +38,7 @@ function wallClockSeasonLabel() {
 }
 
 function leagueTitle(seasonLabel) {
-  return `Tri-Continental League of Titans, ${seasonLabel || wallClockSeasonLabel()} season`
+  return `The FOS League, ${seasonLabel || wallClockSeasonLabel()} season`
 }
 
 // Lion silhouette extracted verbatim from public/tclot-fantasy-style-banner.svg.
@@ -3001,19 +3001,6 @@ function App() {
     setSelectedStandingsEntry((prev) => (prev === leagueEntryId ? null : leagueEntryId))
   }, [])
 
-  /** Manager display name keyed by `league_entry` — used under each team
-   * name in the hero card and the condensed rows. Mirrors the lookup
-   * `BrandHeader` already does on the same `leagueEntries` array. */
-  const managerByEntry = useMemo(() => {
-    const m = new Map()
-    for (const e of leagueEntries ?? []) {
-      if (e?.id == null) continue
-      const name = `${e.player_first_name ?? ''} ${e.player_last_name ?? ''}`.trim()
-      if (name) m.set(e.id, name)
-    }
-    return m
-  }, [leagueEntries])
-
   const sortedStandingsRows = useMemo(() => {
     if (!standingsSort) return tableRows
     const { key, dir } = standingsSort
@@ -3386,7 +3373,6 @@ function App() {
                   >
                 {leaderStandingsRow && (() => {
                   const leader = leaderStandingsRow
-                  const leaderMgr = managerByEntry.get(leader.league_entry) ?? ''
                   const isSelected = selectedStandingsEntry === leader.league_entry
                   const leaderDisplayName = isMobileStandings
                     ? standingsMobileTeamName(leader.teamName)
@@ -3401,7 +3387,7 @@ function App() {
                     <div
                       className={`standings-hero-card${isSelected ? ' is-selected' : ''}`}
                       tabIndex={0}
-                      aria-label={`${leaderDisplayName}${!isMobileStandings && leaderMgr ? ' — ' + leaderMgr : ''}, ${leader.total} points, ${seasonEnded ? 'champion' : 'top of the league'}`}
+                      aria-label={`${leaderDisplayName}, ${leader.total} points, ${seasonEnded ? 'champion' : 'top of the league'}`}
                       onClick={() => toggleStandingsHighlight(leader.league_entry)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
@@ -3451,9 +3437,6 @@ function App() {
                               {leaderDisplayName}
                             </ClickableTeamName>
                           </div>
-                          {!isMobileStandings && leaderMgr ? (
-                            <div className="standings-hero-card__mgr">{leaderMgr}</div>
-                          ) : null}
                         </div>
                         <div className="standings-hero-card__pts">
                           <div className="standings-hero-card__pts-num tabular">{leader.total}</div>
@@ -3644,7 +3627,6 @@ function App() {
                       <tbody>
                         {nonLeaderStandingsRows.map((row) => {
                           const isSelected = selectedStandingsEntry === row.league_entry
-                          const mgr = managerByEntry.get(row.league_entry) ?? ''
                           const rowClass = [
                             row.rank === 8 ? 'standings-row--divider-above standings-row--8th' : '',
                             isSelected ? 'is-selected' : '',
@@ -3692,9 +3674,6 @@ function App() {
                                     >
                                       {row.teamName}
                                     </ClickableTeamName>
-                                    {mgr ? (
-                                      <span className="standings-team-mgr">{mgr}</span>
-                                    ) : null}
                                   </span>
                                 </span>
                               </td>
@@ -3815,6 +3794,9 @@ function App() {
             </>
           )}
 
+          {/* TCLOT heritage is hidden on thefos: every nav entry point to
+              'hall' was removed, so this render is unreachable. Kept so the
+              heritage component tree stays wired for any future archive. */}
           {dashboardView === 'hall' ? (
             <HallOfChampions tableRows={tableRows} />
           ) : null}

@@ -107,12 +107,6 @@ export function DashboardNav({ variant, dashboardView, onSelect, navLocked = fal
       icon: /** @type {const} */ ('shuffle'),
     },
     {
-      id: /** @type {const} */ ('hall'),
-      label: 'TCLOT Heritage',
-      shortLabel: 'Heritage',
-      icon: /** @type {const} */ ('column'),
-    },
-    {
       id: /** @type {const} */ ('more'),
       label: 'More',
       shortLabel: 'More',
@@ -125,7 +119,6 @@ export function DashboardNav({ variant, dashboardView, onSelect, navLocked = fal
   const unlockedItems = isBottom ? primaryItems : topItems
   const preDraftItems = [
     unlockedItems.find((i) => i.id === 'teamSelection'),
-    unlockedItems.find((i) => i.id === 'hall'),
   ].filter(Boolean)
   const items = navLocked ? preDraftItems : unlockedItems
 
@@ -183,11 +176,9 @@ export function DashboardMorePanel({
 }) {
   // The persistent mobile bottom tab bar (MobileBottomNav.jsx) now surfaces
   // Table (Standings), Moves, Players, and a contextual centre (FPL Live)
-  // at the top level. That leaves only Heritage and Settings to reach
-  // through More, so this panel lists exactly those two.
+  // at the top level. That leaves only Settings to reach through More.
   // ('more' is effectively mobile-only — the desktop top nav filters it out.)
   const rows = [
-    { id: /** @type {const} */ ('hall'),     label: 'Heritage', emoji: '🏛️' },
     { id: /** @type {const} */ ('settings'), label: 'Settings', emoji: '⚙️' },
   ]
 

@@ -38,40 +38,16 @@ import { SettingsPanelBody } from './SettingsPage'
 import { useOverlayDismissal } from './overlayStack.js'
 import './LeagueInfoModal.css'
 
-/** Tab order — matches the order requested by the user (Lingo first).
- * The default landing tab is `terminology` (the league-canon glossary,
- * surfaced as "Lingo"); the full set is exposed as the site-standard
- * `.subnav` segmented pill row in the modal body. Internal `id`s are
- * kept stable so the content-panel gating + aria wiring don't change. */
+/** Tab order — Teams first (the default landing tab), then Managers and
+ * Settings. The TCLOT-era "Lingo" glossary tab is retired on thefos —
+ * its terms were league-canon in-jokes about TCLOT managers. Internal
+ * `id`s are kept stable so the content-panel gating + aria wiring don't
+ * change. */
 const LI_TABS = /** @type {const} */ ([
-  { id: 'terminology', label: 'Lingo' },
   { id: 'roster',      label: 'Teams' },
   { id: 'managers',    label: 'Managers' },
   { id: 'settings',    label: 'Settings' },
 ])
-
-/**
- * League-canon terminology. Order is roughly grouped by theme: scoring /
- * GW outcomes first, then season-arc accolades, then manager-personality
- * jokes. Definitions are quoted verbatim from the league chat so the
- * voice stays authentic.
- */
-const TCLOT_TERMS = [
-  { term: 'Villains Victory',     def: 'Winning with the 7th highest score of the GW.' },
-  { term: 'Heroes Defeat',        def: 'Losing with the 2nd highest score of the GW.' },
-  { term: 'The Motty',            def: 'Winning thanks to a bench player coming in.' },
-  { term: 'Douchebag Sneak',      def: 'Winning with the 5th highest score.' },
-  { term: 'Stallions Stalemate',  def: 'The top 2 scorers of the GW drawing.' },
-  { term: 'The Ream',             def: 'Picking an insanely poor first waiver.' },
-  { term: 'The Sancho',           def: 'Terrible first draft pick.' },
-  { term: 'La Decima',            def: 'The first to win 10 game weeks in a season.' },
-  { term: 'The Golden Circuit',   def: 'Defeating all other seven managers consecutively.' },
-  { term: 'La Gran Vergüenza',    def: 'Losing to all other seven managers consecutively.' },
-  { term: 'Box Office',           def: 'Michael Alan Sutton and his ability to mince through life while consistently meeting the highest levels of glory.' },
-  { term: 'Grumpy Goodacre',      def: "Declaring your chances in a GW over when they're clearly not." },
-  { term: 'Dr Ward',              def: 'Declaring a player heading off injured in a wildly incorrect manner.' },
-  { term: 'TTAT',                 def: 'Tery Talks About Tery — when Webster pops up to chime in about his own team in spite of the chatter at the time.' },
-]
 
 /**
  * Returns up to `count` leading initials of `text`. Used for the
@@ -117,18 +93,18 @@ export function LeagueInfoModal({
 }) {
   const closeBtnRef = useRef(null)
   const modalRef = useRef(null)
-  /* Active tab inside the modal body — Lingo (`terminology`) on first
-   * open, then sticky for the lifetime of the open instance (resets when
-   * the modal is dismissed and re-opened so the user always lands on the
-   * glossary first). */
-  const [activeTab, setActiveTab] = useState(/** @type {string} */ ('terminology'))
-  /* Reset to the glossary whenever the modal closes — done during render
+  /* Active tab inside the modal body — Teams (`roster`) on first open,
+   * then sticky for the lifetime of the open instance (resets when the
+   * modal is dismissed and re-opened so the user always lands on the
+   * roster first). */
+  const [activeTab, setActiveTab] = useState(/** @type {string} */ ('roster'))
+  /* Reset to the roster whenever the modal closes — done during render
    * (React's "adjust state when props change" pattern) instead of an
    * effect, so there's no extra post-commit render pass. */
   const [prevOpen, setPrevOpen] = useState(open)
   if (open !== prevOpen) {
     setPrevOpen(open)
-    if (!open) setActiveTab('terminology')
+    if (!open) setActiveTab('roster')
   }
 
   /* Escape + browser/Android system back — shared overlay stack, same
@@ -240,21 +216,15 @@ export function LeagueInfoModal({
         </button>
 
         <div className="li-modal__body li-modal__body--scroll">
-          {/* Hero — single branded header banner (`/brand/tclot-header.jpg`)
-              that already carries the TCLOT lion logo, the wordmark, the
-              "Tri-Continental League of Titans" subtitle, and the three
-              country flags. It replaces the former belt + <h1> + flag row.
-              The img keeps `id="league-info-modal-title"` so the dialog's
-              `aria-labelledby` still resolves to an accessible name (via
-              the `alt` text). */}
+          {/* Hero — plain FOS wordmark header (the TCLOT banner image is
+              retired). Keeps `id="league-info-modal-title"` so the dialog's
+              `aria-labelledby` still resolves to an accessible name. */}
           <div className="li-card li-card--hero">
-            <div className="li-hero li-hero--banner">
-              <img
-                className="li-hero__banner"
-                src={`${import.meta.env.BASE_URL}brand/tclot-header.jpg`}
-                alt="TCLOT — Tri-Continental League of Titans"
-                id="league-info-modal-title"
-              />
+            <div className="li-hero li-hero--wordmark">
+              <h1 className="li-hero__wordmark" id="league-info-modal-title">
+                FOS
+                <span className="li-hero__wordmark-sub">The FOS League</span>
+              </h1>
             </div>
           </div>
 
@@ -365,25 +335,6 @@ export function LeagueInfoModal({
                   })}
                 </div>
               )}
-            </div>
-          ) : null}
-
-          {/* Terminology tab — league-canon glossary. */}
-          {activeTab === 'terminology' ? (
-            <div
-              className="li-card li-card--terminology"
-              role="tabpanel"
-              id="li-tabpanel-terminology"
-              aria-labelledby="li-tab-terminology"
-            >
-              <dl className="li-terms">
-                {TCLOT_TERMS.map((t) => (
-                  <div className="li-term" key={t.term}>
-                    <dt className="li-term__name">{t.term}</dt>
-                    <dd className="li-term__def">{t.def}</dd>
-                  </div>
-                ))}
-              </dl>
             </div>
           ) : null}
 

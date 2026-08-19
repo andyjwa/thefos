@@ -2,14 +2,14 @@
  * Pre-draft chrome gate.
  *
  * Until the FPL draft is complete, desktop + mobile nav only expose Moves
- * (Draft) and Heritage. On mobile, the brand-header status strip
- * ("Pre-season · …") stays hidden until one hour after the draft finishes,
- * then returns. The TCLOT + season row stays visible throughout.
+ * (Draft). On mobile, the brand-header status strip ("Pre-season · …")
+ * stays hidden until one hour after the draft finishes, then returns.
+ * The wordmark + season row stays visible throughout.
  */
 
 export const DRAFT_HEADER_RESUME_MS = 60 * 60 * 1000
 
-const PRE_DRAFT_ALLOWED_VIEWS = new Set(['teamSelection', 'hall'])
+const PRE_DRAFT_ALLOWED_VIEWS = new Set(['teamSelection'])
 
 /** @param {unknown} value */
 export function parseDraftInstant(value) {

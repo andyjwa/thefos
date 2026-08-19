@@ -1,7 +1,7 @@
 {
-  "name": "TCLOT — Tri-Continental League of Titans",
-  "short_name": "TCLOT",
-  "description": "Tri-Continental League of Titans fantasy dashboard.",
+  "name": "FOS — The FOS League",
+  "short_name": "FOS",
+  "description": "The FOS League fantasy draft dashboard.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

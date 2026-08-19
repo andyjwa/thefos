@@ -6,6 +6,7 @@ import {
   currentSeasonNameByManagerKey,
   overlayCurrentSeasonEntryName,
 } from './currentSeasonClubNames.js';
+import { setManagerDirectory } from './managerDirectory.js';
 
 import { isArchiveView, leagueDataBase } from './seasonArchive.js';
 
@@ -439,21 +440,35 @@ function displayEntryName(e, currentSeasonNameByManager) {
   return id != null ? `Team ${id}` : 'Unknown';
 }
 
-/** FPL draft uses `id` in matches/standings; `entry_id` can differ — index both. */
+/**
+ * FPL draft uses `id` in matches/standings; `entry_id` can differ — index both.
+ *
+ * Two passes: `id` keys are authoritative and written first; `entry_id`
+ * aliases are only added when they don't collide with another team's `id`.
+ * (In leagues where the two id sequences overlap — e.g. entry_id ≈ id − 4 —
+ * a single-pass write let a later team's alias clobber an earlier team's
+ * real key, shifting every standings team name.)
+ */
 function buildTeamsMap(leagueEntries, currentSeasonNameByManager) {
   const teams = {};
+  const rows = [];
   for (const e of leagueEntries || []) {
     if (!e || e.id == null) continue;
     const row = { ...e, entry_name: displayEntryName(e, currentSeasonNameByManager) };
+    rows.push(row);
     teams[e.id] = row;
-    if (e.entry_id != null && e.entry_id !== e.id) {
-      teams[e.entry_id] = row;
+  }
+  for (const row of rows) {
+    if (row.entry_id != null && row.entry_id !== row.id && teams[row.entry_id] == null) {
+      teams[row.entry_id] = row;
     }
   }
   return teams;
 }
 
-/** Standings rank order → default shirt kit index (wraps when more teams than kits). */
+/** Standings rank order → default kit index (wraps when more teams than kits).
+ * Same two-pass shape as {@link buildTeamsMap}: `league_entry` keys win,
+ * `entry_id` aliases only fill gaps so overlapping id sequences can't clobber. */
 function buildDefaultKitIndexByLeagueEntry(sortedByRank, teams) {
   const out = Object.create(null);
   for (let i = 0; i < sortedByRank.length; i++) {
@@ -461,8 +476,13 @@ function buildDefaultKitIndexByLeagueEntry(sortedByRank, teams) {
     const le = sortedByRank[i].league_entry;
     if (le == null) continue;
     out[le] = idx;
+  }
+  for (let i = 0; i < sortedByRank.length; i++) {
+    const idx = i % TEAM_KIT_COUNT;
+    const le = sortedByRank[i].league_entry;
+    if (le == null) continue;
     const fpl = teams[le]?.entry_id;
-    if (fpl != null && Number(fpl) !== Number(le)) {
+    if (fpl != null && Number(fpl) !== Number(le) && out[fpl] == null) {
       out[fpl] = idx;
     }
   }
@@ -705,6 +725,7 @@ function processLeagueData(raw, extras = {}) {
   let standingsRaw = details.standings || [];
 
   const teams = buildTeamsMap(leagueEntries, extras.currentSeasonNameByManager);
+  setManagerDirectory(leagueEntries);
   const finishedCount = matches.filter((m) => m.finished).length;
 
   if (finishedCount > 0 && leagueEntries.length > 0) {

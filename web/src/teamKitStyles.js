@@ -6,6 +6,27 @@
  */
 export const TEAM_KIT_COUNT = 12
 
+/**
+ * Twelve distinct circle-badge colours (bg + legible text) for the default
+ * team avatar — a coloured disc with the manager's initials. Index-aligned
+ * with {@link TEAM_KITS} (same standings-order assignment) so hues stay
+ * stable per team across surfaces.
+ */
+export const TEAM_CIRCLES = [
+  { bg: '#7dd3fc', text: '#0c4a6e' }, // sky
+  { bg: '#1d4ed8', text: '#eff6ff' }, // royal blue
+  { bg: '#9f1b2e', text: '#fff5f5' }, // maroon
+  { bg: '#14532d', text: '#ecfdf3' }, // forest green
+  { bg: '#171717', text: '#fafafa' }, // black
+  { bg: '#65a30d', text: '#f7fee7' }, // olive
+  { bg: '#f8fafc', text: '#0f172a' }, // white
+  { bg: '#c41e1e', text: '#fef2f2' }, // red
+  { bg: '#0f766e', text: '#f0fdfa' }, // teal
+  { bg: '#facc15', text: '#422006' }, // yellow
+  { bg: '#ec4899', text: '#fdf2f8' }, // pink
+  { bg: '#ea580c', text: '#fff7ed' }, // orange
+]
+
 export const TEAM_KITS = [
   {
     mode: 'solid',
