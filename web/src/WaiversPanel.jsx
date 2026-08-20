@@ -605,7 +605,7 @@ export function WaiverTotalsToggle({
                 kitIndexByEntry={kitIndexByEntry}
               />
               <span className="waivers-bar-row__team" title={r.teamName}>
-                {firstWord(r.teamName)}
+                {r.teamName}
               </span>
               <span className="waivers-bar-row__track">
                 <span className="waivers-bar-row__fill" style={{ width: pct + '%' }} />
