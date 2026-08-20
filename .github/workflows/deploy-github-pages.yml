@@ -11,11 +11,16 @@ on:
   # - 0 * * * *  — every hour: post-waivers window, post-deadline ingest window, pre-waivers 3-hourly
   #   window (24h before waivers_time), or the daily catch-all windows
   #   (see web/scripts/waiver-refresh-gate.mjs). Push / workflow_dispatch always deploy.
+  # - */15 * * * * — burst cron: deploys ONLY inside the tight post-waivers burst window
+  #   (~10 min grace → 90 min after waivers_time) so fresh waiver results land in ~15–35 min
+  #   instead of waiting on the hourly cron. Every other firing is a cheap gate-only skip.
+  #   GitHub cron has jitter: expect runs minutes late, occasionally skipped.
   schedule:
     - cron: '30 5 * * *'
     - cron: '30 13 * * *'
     - cron: '30 21 * * *'
     - cron: '0 * * * *'
+    - cron: '*/15 * * * *'
 
 permissions:
   contents: read
@@ -45,9 +50,12 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
 
-      # Pushes and manual runs always deploy. Scheduled: hourly is gated to post-waiver windows + daily slot.
+      # Pushes and manual runs always deploy. Scheduled: hourly is gated to post-waiver windows
+      # + daily slot; the 15-minute burst cron only passes inside the tight post-waivers window.
       - name: Waiver / daily schedule gate
         id: gate
+        env:
+          SCHEDULE_CRON: ${{ github.event.schedule }}
         run: |
           if [ "$GITHUB_EVENT_NAME" != "schedule" ]; then
             echo "proceed=1" >> "$GITHUB_OUTPUT"

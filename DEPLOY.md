@@ -30,6 +30,17 @@ On each build, GitHub runs **`ingest.py`** with the committed id, then builds th
 
 **Scheduled builds are gated** (`web/scripts/waiver-refresh-gate.mjs`): the hourly cron only deploys during ~36h after each FPL `waivers_time`, during **05:26–05:45 UTC** daily, or (after a finished gameweek) from **2h after that GW’s deadline** until **3h before the next GW deadline** — so H2H `details.json` can update when a week ends, not only when waivers run. **Pushes to `main` and manual “Run workflow” always deploy.** If the live site looks a week behind, run the workflow or push after `python3 ingest.py` + `npm run publish-real-league`; open `deploy-check.json` on the site and confirm `details.json` reflects the latest finished GW.
 
+**Post-waivers burst cron** (`*/15 * * * *` on the same workflow): for **90 minutes after each `waivers_time`** (past a 10-minute grace while FPL populates the rows) the 15-minute cron also deploys, so fresh waiver results land in **~15–35 min** instead of waiting on the hourly cron. At **every other time of day the burst cron exits at the gate without building** — it never adds deploys to the daily/pre-waiver/post-deadline windows, which stay hourly-only. Expected timing after waivers process:
+
+| Phase | Delay |
+|---|---|
+| FPL publishes waiver rows | ~10 min (gate grace) |
+| Next burst cron firing | ≤ ~15–20 min (plus jitter) |
+| Ingest + build + deploy | a few minutes |
+| **Total** | **≈ 15–35 min after `waivers_time`** |
+
+Note GitHub scheduled workflows have jitter — cron firings often run several minutes late and are occasionally skipped entirely, which the 90-minute window absorbs.
+
 You can also set **Repository variable** `FPL_LEAGUE_ID` (Settings → Variables) if you prefer — same name.
 
 **⚠ Season rollover — update `league-id` every August.** FPL Draft issues a **new league id each season** and recycles old numbers, so last season's id starts resolving to a **stranger's league** on the API. `ingest.py` also compares the fetched managers' last names with the committed `web/public/league-data/details.json` and **fails the build** on a mismatch. When that happens, update `league-id` (and any `FPL_LEAGUE_ID` secrets, including the **github-pages** Environment) to the new number from `draft.premierleague.com/league/<ID>`. Genuinely switching leagues? Set `ALLOW_LEAGUE_ID_OVERRIDE=1` / `ALLOW_LEAGUE_IDENTITY_MISMATCH=1` for one run (or replace the committed league-data via Path B).

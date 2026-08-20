@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
+  burstRefreshEvent,
   postDeadlineIngestEvent,
   preWaiverRefreshEvent,
 } from './waiver-refresh-gate.mjs'
@@ -76,6 +77,43 @@ test('preWaiverRefreshEvent — null on bad input', () => {
   assert.equal(preWaiverRefreshEvent([{ id: 4, waivers_time: WT }], NaN), null)
   assert.equal(
     preWaiverRefreshEvent([{ id: 4 }], Date.parse('2026-09-02T09:00:00Z')),
+    null,
+  )
+})
+
+test('burstRefreshEvent — skips inside the 10-minute grace period', () => {
+  // 5 min after waivers: FPL usually has no rows yet — don't waste a build
+  const now = Date.parse(WT) + 5 * 60 * 1000
+  assert.equal(burstRefreshEvent([{ id: 4, waivers_time: WT }], now), null)
+})
+
+test('burstRefreshEvent — allows inside the burst window', () => {
+  // 25 min after waivers: past grace, well inside the 90-min burst
+  const now = Date.parse(WT) + 25 * 60 * 1000
+  const hit = burstRefreshEvent([{ id: 4, waivers_time: WT }], now)
+  assert.equal(hit?.id, 4)
+  assert.equal(hit?.waiversTime, WT)
+})
+
+test('burstRefreshEvent — skips after 90 minutes (hourly long tail takes over)', () => {
+  // 2h after waivers: burst cron stands down; the hourly cron's 36h
+  // post-waivers window still allows deploys at this point.
+  const now = Date.parse(WT) + 2 * 60 * 60 * 1000
+  assert.equal(burstRefreshEvent([{ id: 4, waivers_time: WT }], now), null)
+})
+
+test('burstRefreshEvent — null on bad input', () => {
+  assert.equal(burstRefreshEvent(null, Date.now()), null)
+  assert.equal(burstRefreshEvent([{ id: 4, waivers_time: WT }], NaN), null)
+  assert.equal(
+    burstRefreshEvent([{ id: 4 }], Date.parse(WT) + 25 * 60 * 1000),
+    null,
+  )
+  assert.equal(
+    burstRefreshEvent(
+      [{ id: 4, waivers_time: 'not-a-date' }],
+      Date.parse(WT) + 25 * 60 * 1000,
+    ),
     null,
   )
 })
