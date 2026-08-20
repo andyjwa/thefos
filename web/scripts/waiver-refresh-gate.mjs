@@ -5,6 +5,14 @@
  * `drops-gw-live` after build-waiver-gw-analytics), every 3 hours in the 24h leading
  * up to `waivers_time`, or at one of the thrice-daily UTC catch-alls.
  *
+ * Two crons share this gate (the workflow passes `github.event.schedule` as
+ * SCHEDULE_CRON): the hourly cron keeps all the windows above, while the
+ * 15-minute burst cron deploys ONLY inside a tight post-waivers burst window
+ * (grace → 90 min after `waivers_time`) and skips at every other time of day,
+ * so results land ~15–35 min after waivers process instead of up to an hour.
+ * GitHub cron has jitter — scheduled runs fire minutes late and are
+ * occasionally skipped — which the burst window absorbs.
+ *
  * Not invoked for push / workflow_dispatch (the workflow skips this logic there).
  * Data: draft bootstrap-static { events: { data: [{ id, waivers_time }, ...] } }.
  */
@@ -16,6 +24,12 @@ const DRAFT_BOOTSTRAP = 'https://draft.premierleague.com/api/bootstrap-static'
 const WAIVER_GRACE_START_MS = 20 * 60 * 1000
 /** Re-run builds at most this long after each `waivers_time` to pick up stragglers */
 const WAIVER_FRESH_WINDOW_MS = 36 * 60 * 60 * 1000
+/** The 15-minute burst cron's `schedule` expression, as GitHub reports it. */
+const BURST_CRON = '*/15 * * * *'
+/** Burst grace: the source site typically has waiver rows ~10 min after `waivers_time`. */
+const BURST_GRACE_MS = 10 * 60 * 1000
+/** Burst deploys stop this long after `waivers_time`; the hourly cron owns the long tail. */
+const BURST_WINDOW_MS = 90 * 60 * 1000
 /**
  * After the PL GW deadline, draft `details.json` H2H rows often flip to `finished` before
  * the next `waivers_time`. Hourly cron must still ingest in that gap (otherwise the site can
@@ -116,8 +130,36 @@ export function preWaiverRefreshEvent(eventList, nowMs) {
   return null
 }
 
+/**
+ * Tight post-waivers window for the 15-minute burst cron: allow only when now is
+ * inside (`waivers_time` + BURST_GRACE_MS, `waivers_time` + BURST_WINDOW_MS).
+ * Everything else — daily catch-alls, pre-waiver cadence, post-deadline ingest —
+ * stays on the hourly cron so the burst cron never multiplies those windows.
+ *
+ * @param {object[]} eventList — bootstrap `events.data`
+ * @param {number} nowMs
+ * @returns {{ id: number, waiversTime: string } | null}
+ */
+export function burstRefreshEvent(eventList, nowMs) {
+  if (!Array.isArray(eventList)) return null
+  const now = Number(nowMs)
+  if (!Number.isFinite(now)) return null
+  for (const e of eventList) {
+    const raw = e?.waivers_time
+    if (typeof raw !== 'string' || !raw) continue
+    const wt = Date.parse(raw)
+    if (!Number.isFinite(wt)) continue
+    if (now > wt + BURST_GRACE_MS && now < wt + BURST_WINDOW_MS) {
+      return { id: e.id, waiversTime: raw }
+    }
+  }
+  return null
+}
+
 async function main() {
-  if (inDailyCatchAllWindow()) {
+  const isBurstCron = (process.env.SCHEDULE_CRON || '').trim() === BURST_CRON
+
+  if (!isBurstCron && inDailyCatchAllWindow()) {
     console.log(
       'waiver-refresh-gate: in daily 05:26–05:45 UTC window — run full deploy',
     )
@@ -139,6 +181,21 @@ async function main() {
   }
 
   const now = Date.now()
+
+  if (isBurstCron) {
+    const burst = burstRefreshEvent(list, now)
+    if (burst) {
+      console.log(
+        `waiver-refresh-gate: burst cron inside post-waivers burst window for GW${burst.id} (waivers_time ${burst.waiversTime}) — run deploy`,
+      )
+      process.exit(0)
+    }
+    console.log(
+      'waiver-refresh-gate: burst cron outside the post-waivers burst window — skip deploy',
+    )
+    process.exit(1)
+  }
+
   for (const e of list) {
     const raw = e?.waivers_time
     if (typeof raw !== 'string' || !raw) continue
