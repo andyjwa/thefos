@@ -57,6 +57,7 @@ test('builds picks from league_entry-id choices with bootstrap enrichment (snake
     playerName: 'Salah',
     teamShort: 'LIV',
     pos: 'MID',
+    wasAuto: false,
   })
   assert.equal(picks[2].entryId, 22)
   assert.equal(picks[2].round, 2)
@@ -113,6 +114,18 @@ test('null on empty / missing payload', () => {
   assert.equal(picksFromDraftChoices(null, ENTRIES), null)
   assert.equal(picksFromDraftChoices({}, ENTRIES), null)
   assert.equal(picksFromDraftChoices({ choices: [] }, ENTRIES), null)
+})
+
+test('propagates was_auto so the UI can flag auto-drafted picks', () => {
+  const raw = {
+    choices: [
+      choice({ index: 1, entry: 101, element: 7, was_auto: true }),
+      choice({ index: 2, pick: 2, entry: 102, element: 8 }),
+    ],
+  }
+  const picks = picksFromDraftChoices(raw, ENTRIES, ELEMENTS, TEAMS)
+  assert.equal(picks[0].wasAuto, true)
+  assert.equal(picks[1].wasAuto, false)
 })
 
 test('falls back to choice name when element missing from bootstrap', () => {

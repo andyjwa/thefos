@@ -139,6 +139,12 @@ export function DraftBoard({
     }))
   }, [leagueEntries, picks])
 
+  /** Whole draft ran on FPL auto-pick (nobody drafted) — board shows system picks. */
+  const allAutoDraft = useMemo(
+    () => picks.length > 0 && picks.every((p) => p.wasAuto === true),
+    [picks],
+  )
+
   const maxRound = useMemo(() => {
     let m = 0
     for (const p of picks) {
@@ -281,6 +287,16 @@ export function DraftBoard({
           <p className="muted draft-board-loading">No draft data.</p>
         ) : (
           <>
+            {allAutoDraft ? (
+              <div className="data-banner draft-board-banner" role="status">
+                <strong>FPL auto-drafted this league.</strong> Every pick in FPL&apos;s draft log
+                was made by auto-pick when the scheduled draft ran without managers picking, so
+                this board shows the squads the system assigned — typically each manager&apos;s
+                default position-ordered queue unless they had set a watchlist. To draft for real,
+                the league admin must redo the draft on{' '}
+                <code>draft.premierleague.com</code> before the season&apos;s first deadline.
+              </div>
+            ) : null}
             {source === 'api' ? (
               <p className="draft-board-hint muted">
                 Order from GW{startGw} squads and snake logic; round-1 slots need{' '}

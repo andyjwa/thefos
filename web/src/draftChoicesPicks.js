@@ -79,6 +79,8 @@ export function picksFromDraftChoices(
       playerName: el?.web_name ?? (choiceName || `Player #${elementId}`),
       teamShort: tm?.short_name ?? '—',
       pos: POS_SHORT[el?.element_type] ?? '—',
+      /** FPL auto-pick (manager absent / timer expired) — not a manual selection. */
+      wasAuto: c.was_auto === true,
     }
   })
 }
