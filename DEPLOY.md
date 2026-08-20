@@ -13,6 +13,14 @@ Two separate things ship to GitHub Pages: **JSON league data** and **PNG logos**
 > so the Live tab works — same value as the GitHub secret in § 1b below. If the
 > deployed site shows the demo-data banner, the build-time FPL fetch failed:
 > commit real league data (Path B below) or redeploy.
+>
+> **Keeping Vercel data fresh:** Vercel only rebuilds on git pushes, so league
+> data (waivers, H2H results) goes stale between commits. Create a **Deploy
+> Hook** (Vercel → Project → Settings → Git → Deploy Hooks, any name, `main`
+> branch) and add its URL as GitHub secret **`VERCEL_DEPLOY_HOOK_URL`** — the
+> Pages workflow then POSTs it whenever a scheduled run passes the refresh gate,
+> so Vercel redeploys on the same hourly/burst cadence as Pages. Without the
+> secret, the step is a no-op.
 
 ---
 
