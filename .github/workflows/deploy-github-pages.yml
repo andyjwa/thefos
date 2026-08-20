@@ -69,6 +69,30 @@ jobs:
             echo "Skipped — not in post-waivers or daily catch-up window (see web/scripts/waiver-refresh-gate.mjs)"
           fi
 
+      # Vercel only rebuilds on git pushes, so its league data goes stale between commits.
+      # When a scheduled/manual run passes the gate, poke the Vercel Deploy Hook so
+      # thefos.vercel.app refetches league data on the same hourly/burst cadence as Pages.
+      # Pushes are skipped — Vercel's Git integration already deploys those.
+      # Secret VERCEL_DEPLOY_HOOK_URL: Vercel → Project → Settings → Git → Deploy Hooks.
+      # Missing secret or hook failure only warns; the Pages deploy continues regardless.
+      - name: Trigger Vercel redeploy (fresh league data)
+        if: steps.gate.outputs.proceed == '1' && github.event_name != 'push'
+        env:
+          VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "${VERCEL_DEPLOY_HOOK_URL:-}" ]; then
+            echo "VERCEL_DEPLOY_HOOK_URL not set — skipping Vercel redeploy (Pages only)."
+            exit 0
+          fi
+          HTTP=$(curl -sS -o /tmp/vercel-hook.out -w "%{http_code}" -X POST "$VERCEL_DEPLOY_HOOK_URL" || echo 000)
+          cat /tmp/vercel-hook.out 2>/dev/null || true
+          echo
+          if [ "$HTTP" -ge 200 ] && [ "$HTTP" -lt 300 ]; then
+            echo "Vercel deploy hook triggered (HTTP $HTTP)"
+          else
+            echo "::warning::Vercel deploy hook failed (HTTP $HTTP) — Pages still deploys; Vercel league data may be stale."
+          fi
+
       # Without this, GH Pages bundles `fplApiBase()` → direct FPL (CORS) and Live/Draft APIs break.
       - name: Require FPL proxy URL for Pages build
         if: steps.gate.outputs.proceed == '1'
